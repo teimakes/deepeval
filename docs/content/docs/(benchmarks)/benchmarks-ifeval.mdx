@@ -26,13 +26,13 @@ IFEval measures how well a model follows **verifiable instructions** such as "do
 
 ### Quickstart
 
-The code below evaluates the latest Claude model (`claude-sonnet-4-6`) on 5 IFEval problems:
+The code below evaluates OpenAI's `gpt-5` on 5 IFEval problems:
 
 ```python
 from deepeval.benchmarks import IFEval
-from deepeval.models import AnthropicModel
+from deepeval.models import OpenAIModel
 
-model = AnthropicModel(model="claude-sonnet-4-6", temperature=0)
+model = OpenAIModel(model="gpt-5", temperature=0)
 
 # Define benchmark with 'n_problems'
 benchmark = IFEval(n_problems=5)
@@ -42,7 +42,7 @@ print(result.overall_accuracy)  # overall instruction-following accuracy (0-1)
 ```
 
 :::tip
-Swap in any other model by using its provider wrapper, e.g. `LiteLLMModel(model="gpt-4o")` or `GeminiModel(model="gemini-2.5-flash")`.
+To evaluate a Mistral model instead, use the LiteLLM wrapper: `LiteLLMModel(model="mistral/mistral-large-latest")`. Any other provider wrapper (e.g. `GeminiModel(model="gemini-2.5-flash")`) works the same way.
 :::
 
 ### Reading the results
