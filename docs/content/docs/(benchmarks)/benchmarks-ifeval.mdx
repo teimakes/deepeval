@@ -22,18 +22,85 @@ There is **ONE** optional argument when using the `IFEval` benchmark:
 
 ## Usage
 
-The code below evaluates a custom `mistral_7b` model ([click here to learn how to use **ANY** custom LLM](/docs/benchmarks-introduction#benchmarking-your-llm)) and assesses its performance on High School Computer Science and Astronomy using 3-shot learning.
+IFEval measures how well a model follows **verifiable instructions** such as "do not use any commas", "answer in exactly 50 words", or "wrap your title in `<< >>`". Each problem carries one or more instruction constraints, and a prediction only counts as correct when **all** of its constraints pass.
+
+### Quickstart
+
+The code below evaluates the latest Claude model (`claude-sonnet-4-6`) on 5 IFEval problems:
 
 ```python
 from deepeval.benchmarks import IFEval
+from deepeval.models import AnthropicModel
+
+model = AnthropicModel(model="claude-sonnet-4-6", temperature=0)
 
 # Define benchmark with 'n_problems'
 benchmark = IFEval(n_problems=5)
+result = benchmark.evaluate(model=model)
 
-# Replace 'mistral_7b' with your own custom model
-benchmark.evaluate(model=mistral_7b)
+print(result.overall_accuracy)  # overall instruction-following accuracy (0-1)
+```
+
+:::tip
+Swap in any other model by using its provider wrapper, e.g. `LiteLLMModel(model="gpt-4o")` or `GeminiModel(model="gemini-2.5-flash")`.
+:::
+
+### Reading the results
+
+`evaluate()` returns an `IFEvalResult` with three fields:
+
+```python
+print(result.overall_accuracy)
+# fraction of problems where ALL instructions passed, e.g. 0.8
+
+print(result.instruction_breakdown)
+# accuracy per instruction type,
+# e.g. {"punctuation:no_comma": 1.0, "length_constraints:number_words": 0.5, ...}
+
+print(result.predictions)
+# pandas DataFrame with columns: Input | Prediction | All_Instructions_Correct
+```
+
+The same values are also stored on the benchmark object after the run as `benchmark.overall_score`, `benchmark.instruction_breakdown`, and `benchmark.predictions`.
+
+### Debugging with verbose mode
+
+```python
+benchmark = IFEval(n_problems=5, verbose_mode=True)
+benchmark.evaluate(model=model)
+```
+
+With `verbose_mode=True`, deepeval prints each problem's input, prediction, and a per-instruction check/cross breakdown, which makes it easy to spot which constraint types the model fails on. Use `result.predictions[result.predictions["All_Instructions_Correct"] == False]` to filter only the failing cases.
+
+### Benchmarking your own LLM
+
+Wrap **ANY** LLM in `DeepEvalBaseLLM` ([click here to learn how to use **ANY** custom LLM](/docs/benchmarks-introduction#benchmarking-your-llm)) and pass it to `evaluate()`:
+
+```python
+from deepeval.models.base_model import DeepEvalBaseLLM
+from deepeval.benchmarks import IFEval
+
+class MyCustomLLM(DeepEvalBaseLLM):
+    def __init__(self):
+        # initialize your client here (API call, Hugging Face pipeline, ...)
+        pass
+
+    def load_model(self):
+        return self.client
+
+    def generate(self, prompt: str) -> str:
+        # return the raw string response for `prompt`
+        ...
+
+    async def a_generate(self, prompt: str) -> str:
+        return self.generate(prompt)
+
+benchmark = IFEval(n_problems=10)
+benchmark.evaluate(model=MyCustomLLM())
 print(benchmark.overall_score)
 ```
+
+To evaluate a model served by a local [vLLM](https://vllm.ai/) server on your own GPU, use `LocalModel(model="<model_name>", base_url="http://localhost:8000/v1/", api_key="vllm")` — see the [vLLM integration](/integrations/models/vllm) page.
 
 ## FAQs
 
